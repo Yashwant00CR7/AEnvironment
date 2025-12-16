@@ -1,0 +1,68 @@
+# Default values for redis.
+
+name: redis
+
+metadata:
+  namespace: aenv
+
+# Namespace configuration
+namespace:
+  # Set to true to automatically create the namespace
+  create: true
+  # Optional labels to add to the namespace
+  labels: {}
+  # Optional annotations to add to the namespace
+  annotations: {}
+
+image:
+  repository: redis
+  tag: "7.2.4"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 6379
+
+resources:
+  limits:
+    cpu: "1"
+    memory: "1Gi"
+  requests:
+    cpu: "100m"
+    memory: "256Mi"
+
+nodeSelector: {}
+
+tolerations: {}
+
+affinity: {}
+
+# 持久化配置（可选）
+persistence:
+  enabled: false
+  storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 1Gi
+
+# Redis 配置（无密码模式）
+redis:
+  # 不设置密码，直接空字符串
+  password: ""
+  # AOF 持久化
+  appendonly: "yes"
+
+# ConfigMap configuration
+configmap:
+  enabled: false
+  clusterEnabled: "no"
+  password: ""
+
+# Redis port
+port: 6379

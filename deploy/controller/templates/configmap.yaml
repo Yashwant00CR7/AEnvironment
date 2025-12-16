@@ -1,0 +1,15 @@
+{{- if .Values.podTemplates }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "controller.fullname" . }}-pod-templates
+  namespace: {{ .Values.metadata.namespace }}
+  labels:
+    {{- include "controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pod-template
+data:
+  {{- range $templateName, $templateContent := .Values.podTemplates }}
+  {{ $templateName }}.yaml: |
+{{ tpl $templateContent $ | indent 4 }}
+  {{- end }}
+{{- end }}

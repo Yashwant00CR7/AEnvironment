@@ -1,0 +1,15 @@
+dependencies:
+- name: controller
+  repository: file://./controller
+  version: 0.0.1
+- name: redis
+  repository: file://./redis
+  version: 0.1.0
+- name: envhub
+  repository: file://./envhub
+  version: 0.0.1
+- name: api-service
+  repository: file://./api-service
+  version: 0.0.1
+digest: sha256:1f01dff06c6132524b527accdcfd47083224855e2104c7b53773cc4fcac9ebf4
+generated: "2025-12-11T15:05:52.740323+08:00"

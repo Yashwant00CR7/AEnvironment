@@ -1,0 +1,34 @@
+
+#scheduleAddr: 6.12.179.170:8080
+
+metadata:
+  namespace: aenv
+sandboxNamespace: aenvsandbox
+storageAddr: ""
+leaderElect: true
+
+# ServiceAccount configuration for production
+serviceAccount:
+  create: true
+  name: "aenv-serviceaccount"
+  annotations:
+    description: "ServiceAccount for AEnv Controller in production"
+
+# RBAC configuration for production
+rbac:
+  create: true
+  # Add additional namespaces if needed
+  additionalNamespaces: []
+
+imagePullSecrets:
+  - name: aenv-registry-secret
+
+resources:
+  limits:
+    cpu: "1"
+    memory: "2G"
+    ephemeral-storage: 2Gi
+  requests:
+    cpu: "1"
+    memory: "2"
+    ephemeral-storage: 1Gi

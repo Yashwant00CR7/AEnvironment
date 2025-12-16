@@ -1,0 +1,71 @@
+# Default values for envhub.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+name: envhub
+
+
+metadata:
+  namespace: aenv
+
+# Namespace configuration
+namespace:
+  # Set to true to automatically create the namespace
+  create: true
+  # Optional labels to add to the namespace
+  labels: {}
+  # Optional annotations to add to the namespace
+  annotations: {}
+
+image: docker.io/library/envhub:latest
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+
+service:
+  type: LoadBalancer
+  port: 8083
+  metricsPort: 9091
+
+serviceAccountName: default
+
+resources:
+   limits:
+     cpu: "2"
+     memory: "4G"
+     ephemeral-storage: 10Gi
+   requests:
+     cpu: "0"
+     memory: "0"
+     ephemeral-storage: 10Gi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: {}
+
+# OSS Configuration
+oss:
+  endpoint: ""  # OSS endpoint, e.g., "http://oss-cn-hangzhou.aliyuncs.com"
+  bucket: ""    # OSS bucket name, e.g., "your-bucket-name"
+  keyPrefix: ""  # Key prefix for OSS objects
+  region: ""  # OSS region， e.g. "cn-hangzhou"
+  # Access credentials are loaded from secret (OSS_ACCESS_KEY_ID and OSS_ACCESS_KEY_SECRET)
+  # or from environment variables

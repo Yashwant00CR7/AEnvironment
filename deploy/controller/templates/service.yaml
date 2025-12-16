@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.name }}
+  namespace: {{ .Values.metadata.namespace }}
+  labels:
+    {{ include "controller.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  #clusterIP: None
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+
+  selector:
+    {{ include "controller.selectorLabels" . | nindent 4 }}

@@ -1,0 +1,106 @@
+{{- if .Values.rbac.create -}}
+---
+# ClusterRole for pod management
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "controller.fullname" . }}-pods
+  labels:
+    {{- include "controller.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - '*'
+  resources:
+  - 'pods'
+  - 'pods/status'
+  - 'pods/finalizers'
+  verbs:
+  - '*'
+
+---
+# RoleBinding in the sandbox namespace for pod management
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "controller.fullname" . }}-pods
+  namespace: {{ .Values.sandboxNamespace }}
+  labels:
+    {{- include "controller.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "controller.fullname" . }}-pods
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "controller.serviceAccountName" . }}
+    namespace: {{ .Values.metadata.namespace }}
+
+{{- if .Values.rbac.additionalNamespaces }}
+{{- range .Values.rbac.additionalNamespaces }}
+---
+# RoleBinding in additional namespace: {{ . }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "controller.fullname" $ }}-pods
+  namespace: {{ . }}
+  labels:
+    {{- include "controller.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "controller.fullname" $ }}-pods
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "controller.serviceAccountName" $ }}
+    namespace: {{ $.Values.metadata.namespace }}
+{{- end }}
+{{- end }}
+
+---
+# Role in the controller namespace for full access
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "controller.fullname" . }}-role
+  namespace: {{ .Values.metadata.namespace }}
+  labels:
+    {{- include "controller.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - '*'
+    resources:
+      - '*'
+      - '*/status'
+      - '*/finalizers'
+    verbs:
+      - '*'
+  # 特别添加 ConfigMap 权限用于读取 Pod 模板
+  - apiGroups:
+      - ''
+    resources:
+      - 'configmaps'
+    verbs:
+      - 'get'
+      - 'list'
+      - 'watch'
+
+---
+# RoleBinding in the controller namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "controller.fullname" . }}-rolebinding
+  namespace: {{ .Values.metadata.namespace }}
+  labels:
+    {{- include "controller.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "controller.fullname" . }}-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "controller.serviceAccountName" . }}
+    namespace: {{ .Values.metadata.namespace }}
+
+{{- end }}

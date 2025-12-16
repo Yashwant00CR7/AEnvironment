@@ -1,0 +1,15 @@
+
+
+#scheduleAddr: 6.12.179.170:8080
+imagePullSecrets:
+  - name: aenv-registry-secret
+
+resources:
+  limits:
+    cpu: "1"
+    memory: "2G"
+    ephemeral-storage: 2Gi
+  requests:
+    cpu: "1"
+    memory: "2"
+    ephemeral-storage: 1Gi

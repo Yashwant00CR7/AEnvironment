@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.name }}
+  namespace: {{ .Values.metadata.namespace }}
+  labels:
+    {{ include "controller.labels" . | nindent 4 }}
+spec:
+{{ if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+{{ end }}
+  selector:
+    matchLabels:
+      {{ include "controller.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+    {{ with .Values.podAnnotations }}
+      annotations:
+        {{ toYaml . | nindent 8 }}
+    {{ end }}
+      labels:
+        {{ include "controller.labels" . | nindent 8 }}
+    spec:
+      {{ with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{ toYaml . | nindent 8 }}
+      {{ end }}
+      serviceAccountName: {{ include "controller.serviceAccountName" . }}
+      securityContext:
+        {{ toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Values.name }}
+          securityContext:
+            {{ toYaml .Values.securityContext | nindent 12 }}
+          image: {{ .Values.image }}
+          imagePullPolicy: IfNotPresent
+          {{- if .Values.command }}
+          command:
+            {{- toYaml .Values.command | nindent 12 }}
+          {{- end }}
+          args:
+            - --namespace
+            - {{ include "controller.sandboxNamespace" . }}
+            - --leader-elect
+            - {{ .Values.leaderElect | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+            - name: readiness
+              containerPort: 8081
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /readyz
+              port: 8081
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            {{ toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.podTemplates }}
+          volumeMounts:
+            - name: pod-templates
+              mountPath: /etc/aenv/pod-templates
+              readOnly: true
+          {{- end }}
+      {{- if .Values.podTemplates }}
+      volumes:
+        - name: pod-templates
+          configMap:
+            name: {{ include "controller.fullname" . }}-pod-templates
+      {{- end }}
+      {{ with .Values.nodeSelector }}
+      nodeSelector:
+        {{ toYaml . | nindent 8 }}
+      {{ end }}
+      {{ with .Values.affinity }}
+      affinity:
+        {{ toYaml . | nindent 8 }}
+      {{ end }}
+      {{ with .Values.tolerations }}
+      tolerations:
+        {{ toYaml . | nindent 8 }}
+      {{ end }}

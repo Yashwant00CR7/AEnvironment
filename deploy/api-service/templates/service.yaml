@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.name }}
+  namespace: {{ .Values.metadata.namespace }}
+  labels:
+    {{ include "api-service.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  #clusterIP: None
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: {{ .Values.service.mcpProxyPort }}
+      targetPort: mcp-proxy
+      protocol: TCP
+      name: mcp-proxy
+
+  selector:
+    {{ include "api-service.selectorLabels" . | nindent 4 }}

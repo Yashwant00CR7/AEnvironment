@@ -1,0 +1,196 @@
+# Default values for controller.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+name: controller
+
+metadata:
+  namespace: aenv
+sandboxNamespace: aenvsandbox
+
+# Namespace configuration
+namespace:
+  # Set to true to automatically create the namespace(s)
+  create: true
+  # Optional labels to add to the namespace
+  labels: {}
+  # Optional annotations to add to the namespace
+  annotations: {}
+storageAddr: ""
+leaderElect: false
+
+image: docker.io/library/controller:latest
+
+# Command to run in the container (optional)
+# If not specified, uses the image's default ENTRYPOINT
+# Example: ["/usr/local/bin/controller"]
+command: ["/usr/bin/controller"]
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+
+podAnnotations: {}
+
+podSecurityContext: {}
+# fsGroup: 2000
+
+securityContext: {}
+
+service:
+  type: LoadBalancer
+  port: 8080
+
+# ServiceAccount configuration
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "aenv-serviceaccount"
+
+# RBAC configuration
+rbac:
+  # Specifies whether RBAC resources should be created
+  create: true
+  # Additional namespaces where pod management permissions are needed
+  # By default, permissions are granted in sandboxNamespace
+  additionalNamespaces: []
+  # Example:
+  # additionalNamespaces:
+  #   - win-env-namespace
+  #   - other-namespace
+
+resources:
+  limits:
+    cpu: "2"
+    memory: "4G"
+    ephemeral-storage: 10Gi
+  requests:
+    cpu: "0"
+    memory: "0"
+    ephemeral-storage: 10Gi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: {}
+
+affinity: {}
+
+# Pod 模板配置
+# 所有模板存储在一个 ConfigMap 中，通过 Volume 挂载到 /etc/aenv/pod-templates/
+# 文件名格式: {templateType}.yaml
+podTemplates:
+  # Single Container 模板（默认）
+  singleContainer: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: placeholder
+      namespace: {{ .Values.sandboxNamespace }}
+      labels:
+        app.kubernetes.io/name: aenv-sandbox
+        template-type: singleContainer
+    spec:
+      containers:
+      - name: main
+        image: weather:v0.1.0
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+            ephemeral-storage: "10Gi"
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+            ephemeral-storage: "5Gi"
+
+        livenessProbe:
+          failureThreshold: 30
+          initialDelaySeconds: 3
+          periodSeconds: 10
+          successThreshold: 1
+          httpGet:
+            path: /health
+            port: 8081
+            scheme: HTTP
+          timeoutSeconds: 60
+        env:
+        - name: AENV_TYPE
+          value: "singleContainer"
+      restartPolicy: Never
+
+
+  # Dual Container 模板
+  dualContainer: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: placeholder
+      namespace: {{ .Values.sandboxNamespace }}
+      labels:
+        app.kubernetes.io/name: aenv-sandbox
+        template-type: dualContainer
+    spec:
+      containers:
+      - name: main
+        image: aenv-base:latest
+        command:
+        - /bin/sh
+        - -c
+        - --
+        - python3 -m aenv.main /app/src
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+            ephemeral-storage: "10Gi"
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+            ephemeral-storage: "5Gi"
+        volumeMounts:
+        - mountPath: /run/containerd
+          name: fifo
+        - mountPath: /shared
+          name: shared-data
+      - name: second
+        image: aenv-sidecar:latest
+        command:
+        - /bin/sh
+        - -c
+        - --
+        - sleep infinity
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+          requests:
+            cpu: "0.5"
+            memory: "512Mi"
+        volumeMounts:
+        - mountPath: /shared
+          name: shared-data
+      volumes:
+      - name: fifo
+        hostPath:
+          path: /var/run/containerd
+          type: ""
+      - name: shared-data
+        emptyDir: {}
+      restartPolicy: Never

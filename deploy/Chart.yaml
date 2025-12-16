@@ -1,0 +1,40 @@
+apiVersion: v2
+name: aenvsystem
+description: Aenvsystem - Complete deployment chart for all components
+type: application
+
+# Chart version - increment when making changes to this umbrella chart
+version: 0.1.0
+
+# Application version - reflects the overall platform version
+appVersion: 1.0.0
+
+# Dependencies - sub-charts
+dependencies:
+  - name: controller
+    version: "0.0.1"
+    repository: "file://./controller"
+    condition: controller.enabled
+  - name: redis
+    version: "0.1.0"
+    repository: "file://./redis"
+    condition: redis.enabled
+  - name: envhub
+    version: "0.0.1"
+    repository: "file://./envhub"
+    condition: envhub.enabled
+  - name: api-service
+    version: "0.0.1"
+    repository: "file://./api-service"
+    condition: api-service.enabled
+
+# Keywords for Helm repository search
+keywords:
+  - aenv
+  - environment
+  - platform
+  - kubernetes
+
+# Maintainers
+maintainers:
+  - name: AEnv Team
