@@ -1,0 +1,195 @@
+/*
+Copyright 2025.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package controller
+
+import (
+	backendmodels "envhub/models"
+
+	"api-service/models"
+	"api-service/service"
+	"api-service/util"
+
+	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
+)
+
+// EnvInstanceController handles EnvInstance operations
+type EnvInstanceController struct {
+	scheduleClient *service.ScheduleClient
+	backendClient  *service.BackendClient
+	redisClient    *service.RedisClient
+}
+
+// NewEnvInstanceController creates a new EnvInstance controller instance
+func NewEnvInstanceController(scheduleClient *service.ScheduleClient, backendClient *service.BackendClient, redisClient *service.RedisClient) *EnvInstanceController {
+	return &EnvInstanceController{
+		scheduleClient: scheduleClient,
+		backendClient:  backendClient,
+		redisClient:    redisClient,
+	}
+}
+
+// CreateEnvInstanceRequest represents the request body for creating an EnvInstance
+type CreateEnvInstanceRequest struct {
+	EnvName              string            `json:"envName" binding:"required"`
+	Datasource           string            `json:"datasource"`
+	EnvironmentVariables map[string]string `json:"environment_variables"`
+	Arguments            []string          `json:"arguments"`
+	TTL                  string            `json:"ttl"`
+}
+
+// EnvInstanceResponse represents the response body for EnvInstance operations
+type EnvInstanceResponse struct {
+	ID        string `json:"id"`
+	Env       string `json:"env"`
+	CreatedAt string `json:"createdAt"`
+	Status    string `json:"status"`
+}
+
+// CreateEnvInstance creates a new EnvInstance
+// POST /env-instance/
+func (ctrl *EnvInstanceController) CreateEnvInstance(c *gin.Context) {
+	var req CreateEnvInstanceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		backendmodels.JSONErrorWithMessage(c, 400, "Invalid request parameters: "+err.Error())
+		return
+	}
+
+	// Split name and version using SplitEnvNameVersionStrict function
+	name, version, err := util.SplitEnvNameVersionStrict(req.EnvName)
+	if err != nil {
+		backendmodels.JSONErrorWithMessage(c, 400, "Invalid EnvName format: "+err.Error())
+		return
+	}
+	backendEnv, err := ctrl.backendClient.GetEnvByVersion(name, version)
+	if err != nil {
+		backendmodels.JSONErrorWithMessage(c, 500, "Failed to find environment: "+err.Error())
+		return
+	}
+	if backendEnv == nil {
+		backendmodels.JSONErrorWithMessage(c, 404, "Environment not found: "+req.EnvName)
+		return
+	}
+	if req.Datasource != "" {
+		if backendEnv.DeployConfig == nil {
+			backendEnv.DeployConfig = make(map[string]interface{})
+		}
+		// Prefer imagePrefix from DeployConfig, default to empty string
+		imagePrefix := "docker.io/library/aenv"
+		if value, ok := backendEnv.DeployConfig["imagePrefix"]; ok {
+			if str, ok2 := value.(string); ok2 {
+				imagePrefix = str
+			}
+		}
+		secondImageName := imagePrefix + ":" + req.Datasource
+		backendEnv.DeployConfig["secondImageName"] = secondImageName
+	}
+	if req.EnvironmentVariables != nil {
+		backendEnv.DeployConfig["environmentVariables"] = req.EnvironmentVariables
+	}
+	if req.Arguments != nil {
+		backendEnv.DeployConfig["arguments"] = req.Arguments
+	}
+	// Set TTL for environment
+	backendEnv.DeployConfig["ttl"] = req.TTL
+	// Call ScheduleClient to create Pod
+	envInstance, err := ctrl.scheduleClient.CreatePod(backendEnv)
+	if err != nil {
+		backendmodels.JSONErrorWithMessage(c, 500, "Failed to create: "+err.Error())
+		return
+	}
+	envInstance.Env = backendEnv
+
+	token := util.GetCurrentToken(c)
+	if token != nil && ctrl.redisClient != nil {
+		if result, err := ctrl.redisClient.StoreEnvInstanceToRedis(token.Token, envInstance); !result || err != nil {
+			log.Warnf("failed to store EnvInstance in Redis: %v", err)
+		}
+	}
+	// Construct response data
+	backendmodels.JSONSuccess(c, envInstance)
+}
+
+func (ctrl *EnvInstanceController) ListEnvInstances(c *gin.Context) {
+	token := util.GetCurrentToken(c)
+	if token == nil {
+		backendmodels.JSONErrorWithMessage(c, 403, "token required")
+	}
+	var query = models.EnvInstance{Env: &backendmodels.Env{}}
+	id := c.Param("id")
+	if id != "" {
+		// Split name and version using SplitEnvNameVersionStrict function
+		name, version := util.SplitEnvNameVersion(id)
+		query.Env.Name = name
+		query.Env.Version = version
+	}
+	if ctrl.redisClient == nil {
+		backendmodels.JSONErrorWithMessage(c, 500, "no redis is declared for supporting listEnvInstance api, please specify `redis-addr` flag")
+		return
+	}
+	instances, err := ctrl.redisClient.ListEnvInstancesFromRedis(token.Token, &query)
+	if err != nil {
+		backendmodels.JSONErrorWithMessage(c, 500, err.Error())
+	}
+	backendmodels.JSONSuccess(c, instances)
+}
+
+// GetEnvInstance retrieves a single EnvInstance
+// GET /env-instance/:id
+func (ctrl *EnvInstanceController) GetEnvInstance(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		backendmodels.JSONErrorWithMessage(c, 400, "Missing id parameter")
+		return
+	}
+	// Call ScheduleClient to query Pod
+	envInstance, err := ctrl.scheduleClient.GetPod(id)
+	if err != nil {
+		backendmodels.JSONErrorWithMessage(c, 500, "Failed to query: "+err.Error())
+		return
+	}
+	backendmodels.JSONSuccess(c, envInstance)
+}
+
+// DeleteEnvInstance deletes an EnvInstance
+// DELETE /env-instance/:id
+func (ctrl *EnvInstanceController) DeleteEnvInstance(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		backendmodels.JSONErrorWithMessage(c, 400, "Missing id parameter")
+		return
+	}
+
+	// Call ScheduleClient to delete Pod
+	success, err := ctrl.scheduleClient.DeletePod(id)
+	if err != nil {
+		backendmodels.JSONErrorWithMessage(c, 500, "Failed to delete: "+err.Error())
+		return
+	}
+
+	if !success {
+		backendmodels.JSONErrorWithMessage(c, 500, "Failed to delete")
+		return
+	}
+	backendmodels.JSONSuccess(c, "Deleted successfully")
+	token := util.GetCurrentToken(c)
+	if token != nil && ctrl.redisClient != nil {
+		if result, err := ctrl.redisClient.RemoveEnvInstanceFromRedis(token.Token, id); !result || err != nil {
+			log.Warnf("failed to remove EnvInstance in Redis: %v", err)
+		}
+	}
+}
