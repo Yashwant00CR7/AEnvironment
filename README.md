@@ -4,7 +4,7 @@
 </p>
 
 <p align="center">
-  <img src="./docs/images/cover.jpeg" alt="AEnvironment Architecture" width="800"/>
+  <img src="./docs/images/cover.png" alt="AEnvironment Architecture" width="800"/>
 </p>
 
 <p align="center">
@@ -101,7 +101,7 @@ With Agent as Environment, you can:
 async with Environment("agent-b@1.0.0") as agent_b:
     # List available tools from Agent B
     tools = await agent_b.list_tools()
-    
+
     # Call Agent B's chat tool
     response = await agent_b.call_tool("chat", {"message": "Hello!"})
     print(response.content)
