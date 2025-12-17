@@ -1,6 +1,6 @@
 <p align="center">
   <h1 align="center">AEnvironment</h1>
-  <p align="center"><b>Everything as Environmen</b> — A Production-Grade Environment Platform for Agentic RL and Agent</p>
+  <p align="center"><b>Everything as Environment</b> — A Production-Grade Environment Platform for Agentic RL and Agent</p>
 </p>
 
 <p align="center">
@@ -31,7 +31,7 @@ AEnvironment abstracts everything as an environment—from simple tool functions
 
 **🚀 Seamless Agentic RL Training Integration** - With native MCP support and OpenAI Agent SDK compatibility, you can focus on agent logic and seamlessly integrate into RL training workflows.
 
-**🤖 Agent as Environment** - Treat agents as environments, enabling multi-agent orchestration. Compatible with mainstream agent frameworks including OpenAI Agents SDK and CAMEL.
+**🤖 Agent as Environment** - Treat agents as environments, enabling multi-agent orchestration. Compatible with mainstream agent frameworks including OpenAI Agents SDK.
 
 **⚡ Rapid Development to Production** - Define tools, build, and deploy in seconds. AEnvironment provides a unified, low-threshold environment API abstraction, making environments no longer a bottleneck in the training pipeline.
 
@@ -109,8 +109,6 @@ async with Environment("agent-b@1.0.0") as agent_b:
 
 This design enables agents to be composed and orchestrated like environments, supporting complex multi-agent scenarios where agents can interact with each other through the same unified interface.
 
-📖 See [Agent as Environment Example](./docs/examples/agent_as_env.md) for more details.
-
 ## 🎯 Built-in Environments
 
 AEnvironment comes with several built-in environments ready to use:
@@ -119,7 +117,7 @@ AEnvironment comes with several built-in environments ready to use:
 |-------------|-------------|---------|
 | **TAU2** | This environment supports RL experiments with TAU2 benchmark | [tau2](./aenv/builtin-envs/tau2/) / [tau2_rl](./aenv/examples/tau2_rl/) |
 | **Mini Terminal** | Lightweight terminal environment with bash command execution support | [mini-terminal](./aenv/builtin-envs/mini-terminal/) |
-| **TerminalBench** | Supports running Terminal Bench evaluation | [terminalbench](./aenv/builtin-envs/terminal/) |
+| **TerminalBench** | Supports running Terminal Bench evaluation | [terminalbench](./aenv/builtin-envs/terminalbench/) |
 
 📖 See [Built-in Environments](./aenv/builtin-envs/) for more details.
 
@@ -165,11 +163,9 @@ def evaluate_task_completion(status: dict) -> float:
 Run your environment locally to test tools:
 
 ```bash
-# Start the MCP server with your tools
+# Start the MCP server within your project dir
 aenv run
 
-# Run with tools from a specific directory
-aenv run ./src
 ```
 
 This will start an MCP server that exposes your tools for testing and development.
@@ -212,25 +208,6 @@ aenv build && aenv push
 # List remote environments
 aenv list
 ```
-
-## Architecture
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                        Clients                              │
-│              (Python SDK / CLI / AI Agents)                 │
-└─────────────────────────┬───────────────────────────────────┘
-                          │ MCP Protocol
-┌─────────────────────────▼───────────────────────────────────┐
-│                     API Service                             │
-├─────────────────────────────────────────────────────────────┤
-│  Controller  │  EnvHub Registry  │  Scheduler              │
-├─────────────────────────────────────────────────────────────┤
-│                    Kubernetes Engine                        │
-└─────────────────────────────────────────────────────────────┘
-```
-
-📖 For detailed architecture documentation, see [Architecture](./docs/architecture/architecture.md).
 
 ## Performance
 
