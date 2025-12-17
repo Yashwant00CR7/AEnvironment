@@ -1,11 +1,6 @@
-name: Envs BuiltIn Images Build and Push Trigger3
+name: Envs BuiltIn Images Build and Push
 
 on:
-  push:
-    branches:
-      - buildin_envs
-    paths:
-      - '.github/workflows/sample_env_image_build.yml'
   workflow_dispatch:
 
 env:

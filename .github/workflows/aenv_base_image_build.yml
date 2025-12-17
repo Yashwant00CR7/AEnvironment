@@ -1,11 +1,6 @@
 name: Docker Build and Push
 
 on:
-  push:
-    branches:
-      - add_workflow
-    paths:
-      - '.github/workflows/aenv_base_image_build.yml'
   workflow_dispatch:
 
 env:

@@ -1,11 +1,6 @@
 name: Template Image Build and Push
 
 on:
-  push:
-    branches:
-      - add_workflow
-    paths:
-      - '.github/workflows/template_image_build.yml'
   workflow_dispatch:
 
 env:

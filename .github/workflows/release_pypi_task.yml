@@ -1,11 +1,6 @@
 name: Release AEnvironment SDK
 
 on:
-  push:
-    branches:
-      - add_workflow
-    paths:
-      - '.github/workflows/release_pypi_task.yml'
   workflow_dispatch:
 
 jobs:
