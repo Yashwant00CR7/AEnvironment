@@ -1,10 +1,8 @@
 FROM python:3.12-slim
 ENV PYTHONPATH=/app/src
-WORKDIR /app
-RUN adduser --disabled-password --gecos '' appuser && \
-    chown -R appuser:appuser /app
-COPY . .
 
-RUN pip install --no-cache-dir -r requirements.txt
+COPY ./ /app/
+RUN python3 -m pip install --no-cache-dir -r /app/requirements.txt
 
-USER appuser
+WORKDIR /root/workspace
+ENTRYPOINT ["python3", "-m", "aenv.main", "/app/src"]
