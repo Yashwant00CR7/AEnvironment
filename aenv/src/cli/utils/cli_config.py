@@ -67,7 +67,7 @@ class CLIConfig:
 
         if self.hub_config is None:
             self.hub_config = {
-                "hub_backend": "https://localhost:8080",
+                "hub_backend": "http://localhost:8080",
                 "api_key": "",
                 "timeout": 30,
             }
